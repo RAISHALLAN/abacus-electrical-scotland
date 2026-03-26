@@ -1,7 +1,7 @@
 // Netlify Function to generate and send quote PDFs
 
-export default async (event) => {
-  if (event.httpMethod !== 'POST') {
+export default async (request) => {
+  if (request.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
       {
@@ -23,7 +23,7 @@ export default async (event) => {
       totalCost,
       notes,
       sendEmail = true,
-    } = JSON.parse(event.body)
+    } = JSON.parse(await request.text())
 
     // Validate required fields
     if (!customerEmail || !customerName || !workDescription || !totalCost) {

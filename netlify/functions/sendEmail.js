@@ -1,8 +1,8 @@
 // Netlify Function to send emails using Resend API
 
-export default async (event) => {
+export default async (request) => {
   // Only allow POST requests
-  if (event.httpMethod !== 'POST') {
+  if (request.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
       {
@@ -13,7 +13,7 @@ export default async (event) => {
   }
 
   try {
-    const { to, subject, html, text } = JSON.parse(event.body)
+    const { to, subject, html, text } = JSON.parse(await request.text())
 
     // Validate required fields
     if (!to || !subject || (!html && !text)) {

@@ -1,8 +1,8 @@
 // Netlify Function to verify admin password
 // Note: For production, consider using proper authentication (OAuth, Auth0, etc.)
 
-export default async (event) => {
-  if (event.httpMethod !== 'POST') {
+export default async (request) => {
+  if (request.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
       {
@@ -13,7 +13,7 @@ export default async (event) => {
   }
 
   try {
-    const { password } = JSON.parse(event.body)
+    const { password } = JSON.parse(await request.text())
 
     if (!password) {
       return new Response(
