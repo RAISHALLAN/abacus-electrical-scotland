@@ -46,7 +46,7 @@ export default async (request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'noreply@abacuselectrical.co.uk',
+        from: 'onboard@resend.dev',
         to: to,
         subject: subject,
         html: html || null,
