@@ -1,7 +1,6 @@
 // Netlify Function to generate and send quote PDFs
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args))
 
-exports.handler = async (event) => {
+export default async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,

@@ -1,7 +1,6 @@
 // Netlify Function to send emails using Resend API
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args))
 
-exports.handler = async (event) => {
+export default async (event) => {
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
     return {

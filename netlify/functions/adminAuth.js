@@ -1,7 +1,7 @@
 // Netlify Function to verify admin password
 // Note: For production, consider using proper authentication (OAuth, Auth0, etc.)
 
-exports.handler = async (event) => {
+export default async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
