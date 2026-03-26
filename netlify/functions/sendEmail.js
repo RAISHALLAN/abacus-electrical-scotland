@@ -3,10 +3,13 @@
 export default async (event) => {
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    }
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      {
+        status: 405,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 
   try {
@@ -14,19 +17,25 @@ export default async (event) => {
 
     // Validate required fields
     if (!to || !subject || (!html && !text)) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Missing required fields' }),
-      }
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     const apiKey = process.env.RESEND_API_KEY
     if (!apiKey) {
       console.error('RESEND_API_KEY not configured')
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Email service not configured' }),
-      }
+      return new Response(
+        JSON.stringify({ error: 'Email service not configured' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     // Send email using Resend API
@@ -49,24 +58,33 @@ export default async (event) => {
 
     if (!response.ok) {
       console.error('Resend API error:', data)
-      return {
-        statusCode: response.status,
-        body: JSON.stringify({ error: 'Failed to send email', details: data }),
-      }
+      return new Response(
+        JSON.stringify({ error: 'Failed to send email', details: data }),
+        {
+          status: response.status,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
+    return new Response(
+      JSON.stringify({
         success: true,
         messageId: data.id,
       }),
-    }
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   } catch (error) {
     console.error('Email sending error:', error)
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error' }),
-    }
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 }

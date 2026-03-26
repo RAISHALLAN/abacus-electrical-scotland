@@ -2,10 +2,13 @@
 
 export default async (event) => {
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    }
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      {
+        status: 405,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 
   try {
@@ -24,10 +27,13 @@ export default async (event) => {
 
     // Validate required fields
     if (!customerEmail || !customerName || !workDescription || !totalCost) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Missing required fields' }),
-      }
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     // Generate quote PDF content (HTML format for email)
@@ -162,26 +168,35 @@ export default async (event) => {
 
       if (!sendEmailResponse.ok) {
         console.error('Failed to send quote email')
-        return {
-          statusCode: 500,
-          body: JSON.stringify({ error: 'Failed to send quote email' }),
-        }
+        return new Response(
+          JSON.stringify({ error: 'Failed to send quote email' }),
+          {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
       }
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
+    return new Response(
+      JSON.stringify({
         success: true,
         message: 'Quote generated successfully',
         quoteHtml: quoteHtml,
       }),
-    }
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   } catch (error) {
     console.error('Quote generation error:', error)
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error' }),
-    }
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 }

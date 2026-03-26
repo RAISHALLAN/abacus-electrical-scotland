@@ -3,20 +3,26 @@
 
 export default async (event) => {
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    }
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      {
+        status: 405,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 
   try {
     const { password } = JSON.parse(event.body)
 
     if (!password) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Password is required' }),
-      }
+      return new Response(
+        JSON.stringify({ error: 'Password is required' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     // Get admin password from environment variable
@@ -24,20 +30,26 @@ export default async (event) => {
 
     if (!correctPassword) {
       console.error('ADMIN_PASSWORD not configured')
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Admin authentication not configured' }),
-      }
+      return new Response(
+        JSON.stringify({ error: 'Admin authentication not configured' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     // Simple password comparison (in production, use proper hashing)
     const isValid = password === correctPassword
 
     if (!isValid) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Invalid password' }),
-      }
+      return new Response(
+        JSON.stringify({ error: 'Invalid password' }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     // Generate a simple JWT-like token (in production, use proper JWT)
@@ -48,19 +60,25 @@ export default async (event) => {
       })
     ).toString('base64')
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
+    return new Response(
+      JSON.stringify({
         success: true,
         token: token,
         expiresIn: 3600, // 1 hour in seconds
       }),
-    }
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   } catch (error) {
     console.error('Admin auth error:', error)
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error' }),
-    }
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 }
