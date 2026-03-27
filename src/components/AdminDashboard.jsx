@@ -23,6 +23,7 @@ import {
   updatePromotion,
   deletePromotion,
 } from '../utils/firebaseHelpers'
+import { generateQuotePDF } from '../utils/pdfGenerator'
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('quotes')
@@ -32,6 +33,11 @@ export default function AdminDashboard() {
   // Quote Requests State
   const [quotes, setQuotes] = useState([])
   const [selectedQuote, setSelectedQuote] = useState(null)
+  const [quoteGeneratorData, setQuoteGeneratorData] = useState(null)
+  const [quoteItems, setQuoteItems] = useState([])
+  const [quoteDiscount, setQuoteDiscount] = useState(0)
+  const [quoteNotes, setQuoteNotes] = useState('')
+  const [generatingPDF, setGeneratingPDF] = useState(false)
 
   // Work Types State
   const [workTypes, setWorkTypes] = useState([])
@@ -244,6 +250,49 @@ export default function AdminDashboard() {
     }
   }
 
+  // ==================== QUOTE GENERATOR ====================
+
+  const handleOpenQuoteGenerator = (quote) => {
+    setQuoteGeneratorData(quote)
+    setQuoteItems([])
+    setQuoteDiscount(0)
+    setQuoteNotes('')
+  }
+
+  const handleDownloadQuotePDF = async () => {
+    if (!quoteGeneratorData) return
+    try {
+      setGeneratingPDF(true)
+      const subtotal = quoteItems.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0)
+      const discountAmount = (subtotal * quoteDiscount) / 100
+      const total = subtotal - discountAmount
+
+      const quoteData = {
+        id: quoteGeneratorData.id,
+        customerName: quoteGeneratorData.customerName,
+        customerEmail: quoteGeneratorData.customerEmail,
+        customerPhone: quoteGeneratorData.customerPhone,
+        customerAddress: quoteGeneratorData.customerAddress,
+        workType: quoteGeneratorData.workType,
+        workDescription: quoteGeneratorData.workDescription,
+        items: quoteItems,
+        subtotal,
+        discount: discountAmount,
+        discountPercent: quoteDiscount,
+        total,
+        notes: quoteNotes,
+      }
+      await generateQuotePDF(quoteData, `Quote-${quoteGeneratorData.customerName.replace(/\s+/g, '-')}.pdf`)
+      alert('Quote PDF downloaded successfully!')
+      setQuoteGeneratorData(null)
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Error generating PDF')
+    } finally {
+      setGeneratingPDF(false)
+    }
+  }
+
   const handleBannerDesignChange = async (newDesign) => {
     try {
       const { ref, set } = await import('firebase/database')
@@ -304,7 +353,7 @@ export default function AdminDashboard() {
                       <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
                         Submitted: {new Date(quote.createdAt).toLocaleDateString()}
                       </p>
-                      <button onClick={() => setSelectedQuote(quote)} className="btn btn-small">
+                      <button onClick={() => handleOpenQuoteGenerator(quote)} className="btn btn-small">
                         Generate Quote
                       </button>
                     </div>
@@ -765,6 +814,97 @@ export default function AdminDashboard() {
             </div>
           )}
         </>
+      )}
+
+      {/* QUOTE GENERATOR MODAL */}
+      {quoteGeneratorData && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: 'var(--color-background)',
+            borderRadius: '8px',
+            padding: '2rem',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            width: '95%',
+            color: 'var(--color-text)',
+          }}>
+            <h2 style={{ marginTop: 0 }}>Generate Quote for {quoteGeneratorData.customerName}</h2>
+
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+              <h3>Customer & Work Details</h3>
+              <p><strong>Email:</strong> {quoteGeneratorData.customerEmail}</p>
+              <p><strong>Phone:</strong> {quoteGeneratorData.customerPhone}</p>
+              <p><strong>Address:</strong> {quoteGeneratorData.customerAddress}</p>
+              <p><strong>Work Type:</strong> {quoteGeneratorData.workType}</p>
+              <p><strong>Description:</strong> {quoteGeneratorData.workDescription}</p>
+            </div>
+
+            <div className="card" style={{ marginBottom: '1.5rem' }}>
+              <h3>Quote Items</h3>
+              {quoteItems.map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: '10px', marginBottom: '10px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+                  <input type="text" value={item.description} onChange={(e) => {
+                    const newItems = [...quoteItems]
+                    newItems[idx].description = e.target.value
+                    setQuoteItems(newItems)
+                  }} style={{ flex: 1, padding: '5px', borderRadius: '4px', border: '1px solid var(--color-accent)' }} placeholder="Description" />
+                  <input type="number" value={item.quantity} onChange={(e) => {
+                    const newItems = [...quoteItems]
+                    newItems[idx].quantity = parseInt(e.target.value) || 1
+                    setQuoteItems(newItems)
+                  }} style={{ width: '60px', padding: '5px', borderRadius: '4px', border: '1px solid var(--color-accent)' }} />
+                  <input type="number" step="0.01" value={item.unitCost} onChange={(e) => {
+                    const newItems = [...quoteItems]
+                    newItems[idx].unitCost = parseFloat(e.target.value) || 0
+                    setQuoteItems(newItems)
+                  }} style={{ width: '90px', padding: '5px', borderRadius: '4px', border: '1px solid var(--color-accent)' }} />
+                  <span style={{ width: '100px', textAlign: 'right', alignSelf: 'center', fontWeight: 'bold' }}>£{(item.quantity * item.unitCost).toFixed(2)}</span>
+                  <button onClick={() => setQuoteItems(quoteItems.filter((_, i) => i !== idx))} style={{ padding: '5px 10px', backgroundColor: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '4px', cursor: 'pointer' }}>Remove</button>
+                </div>
+              ))}
+              <button onClick={() => setQuoteItems([...quoteItems, { description: '', quantity: 1, unitCost: 0 }])} className="btn btn-small">+ Add Item</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div className="card">
+                <h3>Notes</h3>
+                <textarea value={quoteNotes} onChange={(e) => setQuoteNotes(e.target.value)} placeholder="Additional notes..." style={{ width: '100%', height: '120px', padding: '10px', border: '1px solid var(--color-accent)', borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.2)', color: 'var(--color-text)', fontFamily: 'inherit' }} />
+              </div>
+              <div className="card">
+                <h3>Totals</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span>Subtotal:</span>
+                  <span>£{quoteItems.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0).toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span>Discount %:</span>
+                  <input type="number" min="0" max="100" value={quoteDiscount} onChange={(e) => setQuoteDiscount(parseFloat(e.target.value) || 0)} style={{ width: '80px', padding: '5px', borderRadius: '4px', border: '1px solid var(--color-accent)' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', backgroundColor: 'rgba(37,99,235,0.2)', borderRadius: '4px', fontWeight: 'bold', color: 'var(--color-accent)' }}>
+                  <span>TOTAL:</span>
+                  <span>£{(quoteItems.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0) * (1 - quoteDiscount / 100)).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setQuoteGeneratorData(null)} className="btn btn-secondary">Cancel</button>
+              <button onClick={handleDownloadQuotePDF} disabled={generatingPDF} className="btn" style={{ opacity: generatingPDF ? 0.6 : 1 }}>{generatingPDF ? 'Generating...' : 'Download PDF'}</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
