@@ -127,13 +127,30 @@ export default function AdminDashboard() {
     e.preventDefault()
     if (!newWorkType.name) return
     try {
-      await addWorkType(newWorkType)
+      if (editingWorkType) {
+        // Update existing work type
+        await updateWorkType(editingWorkType.name, newWorkType)
+        setEditingWorkType(null)
+      } else {
+        // Add new work type
+        await addWorkType(newWorkType)
+      }
       setNewWorkType({ name: '', description: '' })
       const data = await getWorkTypes()
       setWorkTypes(data)
     } catch (error) {
-      console.error('Error adding work type:', error)
+      console.error('Error saving work type:', error)
     }
+  }
+
+  const handleEditWorkType = (workType) => {
+    setEditingWorkType(workType)
+    setNewWorkType({ name: workType.name, description: workType.description })
+  }
+
+  const handleCancelEditWorkType = () => {
+    setEditingWorkType(null)
+    setNewWorkType({ name: '', description: '' })
   }
 
   const handleDeleteWorkType = async (id) => {
@@ -368,7 +385,7 @@ export default function AdminDashboard() {
             <div>
               <h3 className="section-title">Work Types ({workTypes.length})</h3>
               <form onSubmit={handleAddWorkType} className="card" style={{ marginBottom: '2rem' }}>
-                <h4>Add New Work Type</h4>
+                <h4>{editingWorkType ? '✏️ Edit Work Type' : 'Add New Work Type'}</h4>
                 <div className="form-group">
                   <label>Name</label>
                   <input
@@ -376,6 +393,7 @@ export default function AdminDashboard() {
                     value={newWorkType.name}
                     onChange={e => setNewWorkType({ ...newWorkType, name: e.target.value })}
                     placeholder="e.g., Domestic Wiring"
+                    disabled={editingWorkType}
                   />
                 </div>
                 <div className="form-group">
@@ -386,7 +404,20 @@ export default function AdminDashboard() {
                     placeholder="Description of this work type"
                   />
                 </div>
-                <button type="submit" className="btn">Add Work Type</button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button type="submit" className="btn">
+                    {editingWorkType ? 'Save Changes' : 'Add Work Type'}
+                  </button>
+                  {editingWorkType && (
+                    <button
+                      type="button"
+                      onClick={handleCancelEditWorkType}
+                      className="btn btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </form>
 
               <div className="grid grid-2">
@@ -394,12 +425,21 @@ export default function AdminDashboard() {
                   <div key={type.name} className="card">
                     <h4>{type.name}</h4>
                     <p>{type.description}</p>
-                    <button
-                      onClick={() => handleDeleteWorkType(type.name)}
-                      className="btn btn-secondary btn-small"
-                    >
-                      Delete
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => handleEditWorkType(type)}
+                        className="btn btn-small"
+                        style={{ backgroundColor: 'rgba(37, 99, 235, 0.2)', color: 'var(--color-accent)' }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWorkType(type.name)}
+                        className="btn btn-secondary btn-small"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
