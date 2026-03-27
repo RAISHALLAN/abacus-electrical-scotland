@@ -227,6 +227,16 @@ export const updateQuoteRequest = async (id, updates) => {
   }
 }
 
+export const deleteQuoteRequest = async (id) => {
+  try {
+    const quoteRef = ref(db, `quoteRequests/${id}`)
+    await remove(quoteRef)
+  } catch (error) {
+    console.error('Error deleting quote request:', error)
+    throw error
+  }
+}
+
 // ==================== TESTIMONIALS ====================
 
 export const getApprovedTestimonials = async () => {

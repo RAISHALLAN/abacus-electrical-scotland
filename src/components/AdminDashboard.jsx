@@ -14,6 +14,7 @@ import {
   deleteLabour,
   getQuoteRequests,
   updateQuoteRequest,
+  deleteQuoteRequest,
   getPendingTestimonials,
   getApprovedTestimonials,
   approveTestimonial,
@@ -276,6 +277,18 @@ export default function AdminDashboard() {
     setQuoteNotes('')
   }
 
+  const handleDeleteQuote = async (quoteId) => {
+    if (!confirm('Are you sure you want to delete this quote request? This action cannot be undone.')) return
+    try {
+      await deleteQuoteRequest(quoteId)
+      const data = await getQuoteRequests()
+      setQuotes(data)
+    } catch (error) {
+      console.error('Error deleting quote:', error)
+      alert('Error deleting quote. Please try again.')
+    }
+  }
+
   const handleDownloadQuotePDF = async () => {
     if (!quoteGeneratorData) return
     try {
@@ -370,9 +383,17 @@ export default function AdminDashboard() {
                       <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
                         Submitted: {new Date(quote.createdAt).toLocaleDateString()}
                       </p>
-                      <button onClick={() => handleOpenQuoteGenerator(quote)} className="btn btn-small">
-                        Generate Quote
-                      </button>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={() => handleOpenQuoteGenerator(quote)} className="btn btn-small">
+                          Generate Quote
+                        </button>
+                        <button
+                          onClick={() => handleDeleteQuote(quote.id)}
+                          className="btn btn-secondary btn-small"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
