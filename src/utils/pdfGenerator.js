@@ -6,7 +6,7 @@ export async function generateQuotePDF(quoteData, filename = 'quote.pdf') {
     // Fetch and convert logo to data URL
     let logoDataUrl = ''
     try {
-      const logoResponse = await fetch(window.location.origin + '/assets/Abacus Logo v3-AlNflbtO.jpg')
+      const logoResponse = await fetch(window.location.origin + '/assets/Abacus Logo-B-LKK-21.jpeg')
       const logoBlob = await logoResponse.blob()
       logoDataUrl = await new Promise((resolve) => {
         const reader = new FileReader()
@@ -29,7 +29,7 @@ export async function generateQuotePDF(quoteData, filename = 'quote.pdf') {
       <div style="font-family: Arial, sans-serif; color: #333;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 20px;">
           <div style="flex: 1;">
-            ${logoDataUrl ? `<img src="${logoDataUrl}" style="height: 100px; width: auto; object-fit: contain;" alt="Abacus Electrical" />` : '<p style="font-size: 28px; font-weight: bold; color: #2563eb; margin: 0;">ABACUS ELECTRICAL</p>'}
+            ${logoDataUrl ? `<img src="${logoDataUrl}" style="height: 140px; width: auto; object-fit: contain;" alt="Abacus Electrical" />` : '<p style="font-size: 28px; font-weight: bold; color: #2563eb; margin: 0;">ABACUS ELECTRICAL</p>'}
           </div>
           <div style="text-align: right;">
             <h2 style="margin: 0; color: #2563eb; font-size: 24px;">QUOTE</h2>
