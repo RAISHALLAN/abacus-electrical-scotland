@@ -13,10 +13,9 @@ export async function generateQuotePDF(quoteData, filename = 'quote.pdf') {
 
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 20px;">
-          <div>
-            <h1 style="margin: 0; color: #2563eb; font-size: 28px;">ABACUS ELECTRICAL</h1>
-            <p style="margin: 5px 0; font-size: 12px; color: #666;">Scotland</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 20px;">
+          <div style="flex: 1;">
+            <img src="/Abacus Logo v3-AlNflbtO.jpg" style="height: 100px; width: auto; object-fit: contain;" alt="Abacus Electrical" />
           </div>
           <div style="text-align: right;">
             <h2 style="margin: 0; color: #2563eb; font-size: 24px;">QUOTE</h2>
