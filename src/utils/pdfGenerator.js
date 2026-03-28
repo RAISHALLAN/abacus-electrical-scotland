@@ -119,18 +119,21 @@ export async function generateQuotePDF(quoteData, filename = 'quote.pdf') {
     document.body.appendChild(container)
 
     const canvas = await html2canvas(container, {
-      scale: 2,
+      scale: 1.5,
       backgroundColor: '#ffffff',
       logging: false,
+      useCORS: true,
+      allowTaint: true,
     })
 
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
+      compress: true,
     })
 
-    const imgData = canvas.toDataURL('image/png')
+    const imgData = canvas.toDataURL('image/jpeg', 0.8)
     const imgWidth = 210
     const imgHeight = (canvas.height * imgWidth) / canvas.width
 
