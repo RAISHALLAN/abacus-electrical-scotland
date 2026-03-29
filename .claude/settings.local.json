@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(grep -r 'Abacus Logo' 'C:\\\\Users\\\\raish\\\\Desktop\\\\Claude Projects\\\\Website - Abacus\\\\src' --include=*.jsx --include=*.js)",
+      "Bash(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\raish\\\\Desktop\\\\Claude Projects\\\\Website - Abacus\\\\public\" -Force)"
+    ]
+  }
+}

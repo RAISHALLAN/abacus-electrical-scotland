@@ -3,6 +3,8 @@ import QuoteForm from '../components/QuoteForm'
 import { generateContactConfirmationEmail, generateAdminContactNotificationEmail, sendEmail } from '../utils/emailTemplates'
 
 export default function Contact() {
+  const [activeTab, setActiveTab] = useState('quote')
+
   const [contactInfo, setContactInfo] = useState({
     name: '',
     email: '',
@@ -25,41 +27,42 @@ export default function Contact() {
     setSubmitMessage(null)
 
     try {
-      // Generate email template for customer
-      const customerEmailHtml = generateContactConfirmationEmail(contactInfo.name, contactInfo.message)
+      // ── Emails are best-effort — failures are logged but never shown to the user ──
+      try {
+        const customerEmailHtml = generateContactConfirmationEmail(contactInfo.name, contactInfo.message)
+        await sendEmail(
+          contactInfo.email,
+          'Message received - Abacus Electrical Scotland',
+          customerEmailHtml
+        )
+      } catch (emailErr) {
+        console.warn('Customer contact confirmation email could not be sent:', emailErr.message)
+      }
 
-      // Send confirmation email to customer
-      await sendEmail(
-        contactInfo.email,
-        'Message received - Abacus Electrical Scotland',
-        customerEmailHtml
-      )
+      try {
+        const adminEmail = import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'
+        const adminEmailHtml = generateAdminContactNotificationEmail(
+          contactInfo.name,
+          contactInfo.email,
+          '',
+          contactInfo.message
+        )
+        await sendEmail(
+          adminEmail,
+          'New Contact Message - Abacus Electrical',
+          adminEmailHtml
+        )
+      } catch (emailErr) {
+        console.warn('Admin contact notification email could not be sent:', emailErr.message)
+      }
 
-      // Send admin notification to Graeme
-      const adminEmail = import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'
-      const adminEmailHtml = generateAdminContactNotificationEmail(
-        contactInfo.name,
-        contactInfo.email,
-        '',
-        contactInfo.message
-      )
-      await sendEmail(
-        adminEmail,
-        'New Contact Message - Abacus Electrical',
-        adminEmailHtml
-      )
-
-      // Show success message
       setSubmitMessage({
         type: 'success',
         text: 'Thank you! We\'ve received your message and will get back to you soon. A confirmation email has been sent to ' + contactInfo.email
       })
 
-      // Clear form
       setContactInfo({ name: '', email: '', message: '' })
-
-      // Clear message after 5 seconds
-      setTimeout(() => setSubmitMessage(null), 5000)
+      setTimeout(() => setSubmitMessage(null), 60000)
     } catch (error) {
       console.error('Contact form error:', error)
       setSubmitMessage({
@@ -71,6 +74,20 @@ export default function Contact() {
     }
   }
 
+  const tabStyle = (tab) => ({
+    padding: '0.65rem 1.5rem',
+    border: 'none',
+    borderBottom: activeTab === tab ? '3px solid var(--color-accent)' : '3px solid transparent',
+    background: 'none',
+    color: activeTab === tab ? 'var(--color-accent)' : 'var(--color-text)',
+    fontWeight: activeTab === tab ? 'bold' : 'normal',
+    fontSize: '1rem',
+    cursor: 'pointer',
+    opacity: activeTab === tab ? 1 : 0.65,
+    transition: 'all 0.2s ease',
+    whiteSpace: 'nowrap',
+  })
+
   return (
     <div>
       <h1>Contact Us</h1>
@@ -78,42 +95,59 @@ export default function Contact() {
         Get in touch with us. We're happy to discuss your electrical needs and provide a free quote.
       </p>
 
-      <div className="grid grid-2" style={{ marginBottom: '3rem', gap: '2rem' }}>
-        {/* Contact Information */}
-        <div>
-          <h2 className="section-title">Get In Touch</h2>
-          <div className="card" style={{ marginBottom: '1.5rem' }}>
-            <h4>Phone</h4>
-            <p>
-              <a href={`tel:${import.meta.env.VITE_COMPANY_PHONE || '+440000000000'}`}>
-                {import.meta.env.VITE_COMPANY_PHONE || '(+44) XXX'}
-              </a>
-            </p>
-          </div>
+      {/* ── Tabbed Forms ── */}
+      <div style={{ marginBottom: '3rem' }}>
 
-          <div className="card" style={{ marginBottom: '1.5rem' }}>
-            <h4>Email</h4>
-            <p>
-              <a href={`mailto:${import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'}`}>
-                {import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'}
-              </a>
-            </p>
-          </div>
+        {/* Tab bar */}
+        <style>{`
+          @keyframes tabGlow {
+            0%, 100% { box-shadow: 0 0 6px 2px rgba(37,99,235,0.4), 0 0 12px 4px rgba(99,179,237,0.2); border-color: rgba(37,99,235,0.5); color: inherit; }
+            50%       { box-shadow: 0 0 22px 8px rgba(37,99,235,0.95), 0 0 40px 14px rgba(99,179,237,0.5); border-color: rgba(37,99,235,1);   color: #93c5fd; }
+          }
+          .tab-glow {
+            animation: tabGlow 1.6s ease-in-out infinite;
+          }
+        `}</style>
 
-          <div className="card" style={{ marginBottom: '1.5rem' }}>
-            <h4>Address</h4>
-            <p>{import.meta.env.VITE_COMPANY_ADDRESS || 'Scotland'}</p>
-          </div>
-
-          <div className="card">
-            <h4>Service Area</h4>
-            <p>We provide electrical services throughout Scotland.</p>
-          </div>
+        <div style={{
+          display: 'flex',
+          borderBottom: '1px solid var(--color-border)',
+          marginBottom: '1.5rem',
+          gap: '0.5rem',
+          alignItems: 'flex-end',
+        }}>
+          {/* Quote tab — left, glows when inactive */}
+          <button
+            className={activeTab !== 'quote' ? 'tab-glow' : ''}
+            style={{
+              ...tabStyle('quote'),
+              borderRadius: '6px 6px 0 0',
+              border: activeTab !== 'quote' ? '1px solid rgba(37,99,235,0.4)' : '1px solid transparent',
+              borderBottom: activeTab === 'quote' ? '3px solid var(--color-accent)' : '1px solid transparent',
+              padding: '0.6rem 1.4rem',
+            }}
+            onClick={() => setActiveTab('quote')}
+          >
+            📋 Request a Free Quote
+          </button>
+          {/* Message tab — right, glows when inactive to attract attention */}
+          <button
+            className={activeTab !== 'message' ? 'tab-glow' : ''}
+            style={{
+              ...tabStyle('message'),
+              borderRadius: '6px 6px 0 0',
+              border: activeTab !== 'message' ? '1px solid rgba(37,99,235,0.4)' : '1px solid transparent',
+              borderBottom: activeTab === 'message' ? '3px solid var(--color-accent)' : '1px solid transparent',
+              padding: '0.6rem 1.4rem',
+            }}
+            onClick={() => setActiveTab('message')}
+          >
+            ✉ Send a Message
+          </button>
         </div>
 
-        {/* Contact Form */}
-        <div>
-          <h2 className="section-title">Send a Message</h2>
+        {/* Send a Message tab */}
+        {activeTab === 'message' && (
           <form onSubmit={handleContactSubmit} className="card">
             {submitMessage && (
               <div style={{
@@ -170,16 +204,51 @@ export default function Contact() {
               {submitting ? 'Sending...' : 'Send Message'}
             </button>
           </form>
-        </div>
+        )}
+
+        {/* Request a Free Quote tab */}
+        {activeTab === 'quote' && (
+          <div>
+            <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
+              Fill out the form below to request a free, no-obligation quote for your electrical work.
+            </p>
+            <QuoteForm />
+          </div>
+        )}
       </div>
 
-      {/* Quote Request Section */}
+      {/* ── Get In Touch Details ── */}
       <section className="section">
-        <h2 className="section-title">Request a Free Quote</h2>
-        <p style={{ marginBottom: '2rem', opacity: 0.9 }}>
-          Fill out the form below to request a free, no-obligation quote for your electrical work.
-        </p>
-        <QuoteForm />
+        <h2 className="section-title">Get In Touch</h2>
+        <div className="grid grid-2">
+          <div className="card">
+            <h4>Phone</h4>
+            <p>
+              <a href={`tel:${import.meta.env.VITE_COMPANY_PHONE || '+440000000000'}`}>
+                {import.meta.env.VITE_COMPANY_PHONE || '(+44) XXX'}
+              </a>
+            </p>
+          </div>
+
+          <div className="card">
+            <h4>Email</h4>
+            <p>
+              <a href={`mailto:${import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'}`}>
+                {import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'}
+              </a>
+            </p>
+          </div>
+
+          <div className="card">
+            <h4>Address</h4>
+            <p>{import.meta.env.VITE_COMPANY_ADDRESS || 'Scotland'}</p>
+          </div>
+
+          <div className="card">
+            <h4>Service Area</h4>
+            <p>We provide electrical services throughout Scotland.</p>
+          </div>
+        </div>
       </section>
     </div>
   )

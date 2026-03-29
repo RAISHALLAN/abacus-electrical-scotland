@@ -8,6 +8,8 @@ export default function QuoteForm() {
     email: '',
     phone: '',
     address: '',
+    city: '',
+    postcode: '',
     workType: '',
     workDescription: '',
   })
@@ -53,47 +55,61 @@ export default function QuoteForm() {
     try {
       const selectedWorkType = formData.workType === 'other' ? formData.workDescription : formData.workType
 
-      // Submit quote request to Firebase
+      // ── Step 1: Save to Firebase (critical — must succeed) ──
       await submitQuoteRequest({
         customerName: formData.name,
         customerEmail: formData.email,
         customerPhone: formData.phone,
         customerAddress: formData.address,
+        city: formData.city,
+        postcode: formData.postcode,
         workType: selectedWorkType,
         workDescription: formData.workDescription,
       })
 
-      // Send customer confirmation email
-      const customerEmailHtml = generateQuoteConfirmationEmail(formData.name, selectedWorkType)
-      await sendEmail(
-        formData.email,
-        'Quote Request Received - Abacus Electrical Scotland',
-        customerEmailHtml
-      )
+      // ── Step 2: Send emails (best-effort — never block the success flow) ──
+      // Emails rely on a Netlify serverless function which is only available
+      // on the live site. Failures here are logged but do not affect the user.
+      try {
+        const customerEmailHtml = generateQuoteConfirmationEmail(formData.name, selectedWorkType)
+        await sendEmail(
+          formData.email,
+          'Quote Request Received - Abacus Electrical Scotland',
+          customerEmailHtml
+        )
+      } catch (emailErr) {
+        console.warn('Customer confirmation email could not be sent:', emailErr.message)
+      }
 
-      // Send admin notification email
-      const adminEmail = import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'
-      const adminEmailHtml = generateAdminQuoteNotificationEmail(formData.name, formData.email, selectedWorkType)
-      await sendEmail(
-        adminEmail,
-        'New Quote Request - Abacus Electrical',
-        adminEmailHtml
-      )
+      try {
+        const adminEmail = import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'
+        const adminEmailHtml = generateAdminQuoteNotificationEmail(formData.name, formData.email, selectedWorkType)
+        await sendEmail(
+          adminEmail,
+          'New Quote Request - Abacus Electrical',
+          adminEmailHtml
+        )
+      } catch (emailErr) {
+        console.warn('Admin notification email could not be sent:', emailErr.message)
+      }
 
+      // ── Step 3: Show success ──
       setSubmitted(true)
       setFormData({
         name: '',
         email: '',
         phone: '',
         address: '',
+        city: '',
+        postcode: '',
         workType: '',
         workDescription: '',
       })
 
-      // Reset success message after 5 seconds
-      setTimeout(() => setSubmitted(false), 5000)
+      setTimeout(() => setSubmitted(false), 60000)
     } catch (error) {
-      console.error('Error submitting form:', error)
+      // Only reached if the Firebase save itself failed
+      console.error('Error saving quote request:', error)
       setError('Error submitting form. Please try again or call us directly.')
     } finally {
       setLoading(false)
@@ -167,6 +183,32 @@ export default function QuoteForm() {
             value={formData.address}
             onChange={handleChange}
             placeholder="Your address"
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="city">City/Town *</label>
+          <input
+            type="text"
+            id="city"
+            name="city"
+            value={formData.city}
+            onChange={handleChange}
+            placeholder="City or town"
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="postcode">Postcode *</label>
+          <input
+            type="text"
+            id="postcode"
+            name="postcode"
+            value={formData.postcode}
+            onChange={handleChange}
+            placeholder="Postcode"
             required
           />
         </div>

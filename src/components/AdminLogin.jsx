@@ -1,18 +1,28 @@
 import { useState } from 'react'
+import { signInAnonymously } from 'firebase/auth'
+import { auth } from '../utils/firebase'
 
 export default function AdminLogin({ onLogin }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
 
-    // Check password against environment variable
     if (password === import.meta.env.VITE_ADMIN_PASSWORD) {
-      // Store login in session storage
+      setLoading(true)
+      try {
+        // Sign in anonymously with Firebase so Storage/Auth rules are satisfied
+        await signInAnonymously(auth)
+      } catch (authErr) {
+        console.warn('Firebase anonymous sign-in failed:', authErr.message)
+        // Continue anyway — database features still work without this
+      }
       sessionStorage.setItem('adminLoggedIn', 'true')
       onLogin()
+      setLoading(false)
     } else {
       setError('Incorrect password')
       setPassword('')
@@ -50,8 +60,8 @@ export default function AdminLogin({ onLogin }) {
               </div>
             )}
 
-            <button type="submit" className="btn" style={{ width: '100%' }}>
-              Login to Admin Panel
+            <button type="submit" className="btn" style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Logging in...' : 'Login to Admin Panel'}
             </button>
           </form>
 

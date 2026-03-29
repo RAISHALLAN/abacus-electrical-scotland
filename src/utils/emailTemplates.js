@@ -4,7 +4,7 @@
  */
 
 const COMPANY_NAME = 'Abacus Electrical Scotland'
-const COMPANY_EMAIL = import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'
+const COMPANY_EMAIL = import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectricalscotland.co.uk'
 const COMPANY_PHONE = import.meta.env.VITE_COMPANY_PHONE || '(+44) XXX'
 const ACCENT_COLOR = '#ff6b35'
 

@@ -1,6 +1,28 @@
 import { db } from './firebase'
 import { ref, push, set, get, update, remove, query, orderByChild, onValue } from 'firebase/database'
 
+// ── Cloudinary unsigned upload (free tier, no Firebase Storage needed) ──
+const uploadToCloudinary = async (file) => {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+  if (!cloudName || !uploadPreset || cloudName === 'your_cloud_name_here') {
+    throw new Error('Cloudinary is not configured. Please set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in your .env.local file.')
+  }
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('upload_preset', uploadPreset)
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    { method: 'POST', body: formData }
+  )
+  if (!response.ok) {
+    const err = await response.json()
+    throw new Error(err.error?.message || 'Cloudinary upload failed')
+  }
+  const data = await response.json()
+  return { url: data.secure_url, publicId: data.public_id }
+}
+
 // ==================== WORK TYPES ====================
 
 export const getWorkTypes = async () => {
@@ -434,5 +456,95 @@ export const getGeneratedQuotes = async () => {
   } catch (error) {
     console.error('Error fetching generated quotes:', error)
     return []
+  }
+}
+
+// ==================== GALLERY ====================
+
+export const getGalleryImages = async () => {
+  try {
+    const galleryRef = ref(db, 'gallery')
+    const snapshot = await get(galleryRef)
+    if (snapshot.exists()) {
+      return Object.entries(snapshot.val())
+        .map(([id, value]) => ({ id, ...value }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    }
+    return []
+  } catch (error) {
+    console.error('Error fetching gallery:', error)
+    return []
+  }
+}
+
+export const addGalleryImage = async ({ title, category, description, file }) => {
+  try {
+    const { url: imageUrl, publicId } = await uploadToCloudinary(file)
+    const galleryRef = ref(db, 'gallery')
+    const newRef = push(galleryRef)
+    await set(newRef, { title, category, description, imageUrl, publicId, createdAt: new Date().toISOString() })
+    return newRef.key
+  } catch (error) {
+    console.error('Error adding gallery image:', error)
+    throw error
+  }
+}
+
+export const deleteGalleryImage = async (id) => {
+  try {
+    const dbRef = ref(db, `gallery/${id}`)
+    await remove(dbRef)
+  } catch (error) {
+    console.error('Error deleting gallery image:', error)
+    throw error
+  }
+}
+
+// ==================== BEFORE / AFTER ====================
+
+export const getBeforeAfterPairs = async () => {
+  try {
+    const baRef = ref(db, 'beforeAfter')
+    const snapshot = await get(baRef)
+    if (snapshot.exists()) {
+      return Object.entries(snapshot.val())
+        .map(([id, value]) => ({ id, ...value }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    }
+    return []
+  } catch (error) {
+    console.error('Error fetching before/after pairs:', error)
+    return []
+  }
+}
+
+export const addBeforeAfterPair = async ({ title, category, description, beforeFile, afterFile }) => {
+  try {
+    const [before, after] = await Promise.all([
+      uploadToCloudinary(beforeFile),
+      uploadToCloudinary(afterFile),
+    ])
+    const baRef = ref(db, 'beforeAfter')
+    const newRef = push(baRef)
+    await set(newRef, {
+      title, category, description,
+      beforeUrl: before.url, beforePublicId: before.publicId,
+      afterUrl: after.url, afterPublicId: after.publicId,
+      createdAt: new Date().toISOString(),
+    })
+    return newRef.key
+  } catch (error) {
+    console.error('Error adding before/after pair:', error)
+    throw error
+  }
+}
+
+export const deleteBeforeAfterPair = async (id) => {
+  try {
+    const dbRef = ref(db, `beforeAfter/${id}`)
+    await remove(dbRef)
+  } catch (error) {
+    console.error('Error deleting before/after pair:', error)
+    throw error
   }
 }

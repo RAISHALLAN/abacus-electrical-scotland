@@ -45,7 +45,7 @@ export default function Testimonials() {
     setSubmitMessage('')
 
     try {
-      // Submit testimonial to Firebase
+      // ── Step 1: Save to Firebase (critical — must succeed) ──
       await submitTestimonial({
         name: formData.name,
         email: formData.email,
@@ -53,30 +53,38 @@ export default function Testimonials() {
         text: formData.text,
       })
 
-      // Send customer confirmation email
-      const customerEmailHtml = generateTestimonialConfirmationEmail(formData.name)
-      await sendEmail(
-        formData.email,
-        'Testimonial Received - Abacus Electrical Scotland',
-        customerEmailHtml
-      )
+      // ── Step 2: Send emails (best-effort — never block the success flow) ──
+      try {
+        const customerEmailHtml = generateTestimonialConfirmationEmail(formData.name)
+        await sendEmail(
+          formData.email,
+          'Testimonial Received - Abacus Electrical Scotland',
+          customerEmailHtml
+        )
+      } catch (emailErr) {
+        console.warn('Customer testimonial confirmation email could not be sent:', emailErr.message)
+      }
 
-      // Send admin notification email
-      const adminEmail = import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'
-      const adminEmailHtml = generateAdminTestimonialNotificationEmail(formData.name, formData.rating)
-      await sendEmail(
-        adminEmail,
-        'New Testimonial Submitted - Abacus Electrical',
-        adminEmailHtml
-      )
+      try {
+        const adminEmail = import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'
+        const adminEmailHtml = generateAdminTestimonialNotificationEmail(formData.name, formData.rating)
+        await sendEmail(
+          adminEmail,
+          'New Testimonial Submitted - Abacus Electrical',
+          adminEmailHtml
+        )
+      } catch (emailErr) {
+        console.warn('Admin testimonial notification email could not be sent:', emailErr.message)
+      }
 
+      // ── Step 3: Show success ──
       setFormData({ name: '', email: '', rating: 5, text: '' })
       setShowForm(false)
       setSubmitMessage('Thank you! Your testimonial has been submitted for approval. A confirmation email has been sent to you.')
 
-      // Clear message after 5 seconds
-      setTimeout(() => setSubmitMessage(''), 5000)
+      setTimeout(() => setSubmitMessage(''), 60000)
     } catch (error) {
+      // Only reached if the Firebase save itself failed
       console.error('Error submitting testimonial:', error)
       setSubmitError('Error submitting testimonial. Please try again or contact us directly.')
     } finally {
@@ -109,7 +117,7 @@ export default function Testimonials() {
               "{testimonial.text}"
             </p>
             <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>
-              {new Date(testimonial.date).toLocaleDateString()}
+              {testimonial.createdAt ? new Date(testimonial.createdAt).toLocaleDateString() : ''}
             </p>
           </div>
         ))}

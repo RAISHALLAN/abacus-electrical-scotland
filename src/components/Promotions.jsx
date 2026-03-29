@@ -24,15 +24,30 @@ export default function Promotions() {
 
   return (
     <section className="section">
+      {/* Keyframe animation injected inline — flashes white twice then pauses */}
+      <style>{`
+        @keyframes promoFlash {
+          0%   { box-shadow: 0 0 0px 0px rgba(255,255,255,0);   background-color: transparent; }
+          10%  { box-shadow: 0 0 28px 8px rgba(255,255,255,0.55); background-color: rgba(255,255,255,0.10); }
+          20%  { box-shadow: 0 0 0px 0px rgba(255,255,255,0);   background-color: transparent; }
+          32%  { box-shadow: 0 0 28px 8px rgba(255,255,255,0.55); background-color: rgba(255,255,255,0.10); }
+          44%  { box-shadow: 0 0 0px 0px rgba(255,255,255,0);   background-color: transparent; }
+          100% { box-shadow: 0 0 0px 0px rgba(255,255,255,0);   background-color: transparent; }
+        }
+        .promo-flash {
+          animation: promoFlash 4s ease-in-out infinite;
+        }
+      `}</style>
+
       <h2 className="section-title">Special Offers</h2>
 
       <div className="grid grid-2">
         {promotions.map((promo) => (
           <div
             key={promo.id}
-            className="card"
+            className="card promo-flash"
             style={{
-              border: `2px solid var(--color-accent)`,
+              border: '2px solid var(--color-accent)',
               position: 'relative',
               overflow: 'hidden',
             }}

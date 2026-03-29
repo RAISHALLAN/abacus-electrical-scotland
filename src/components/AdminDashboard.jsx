@@ -23,6 +23,8 @@ import {
   addPromotion,
   updatePromotion,
   deletePromotion,
+  getGalleryImages, addGalleryImage, deleteGalleryImage,
+  getBeforeAfterPairs, addBeforeAfterPair, deleteBeforeAfterPair,
 } from '../utils/firebaseHelpers'
 import { generateQuotePDF } from '../utils/pdfGenerator'
 
@@ -30,6 +32,9 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('quotes')
   const [loading, setLoading] = useState(true)
   const [bannerDesign, setBannerDesign] = useState('design-wires')
+  const [socialLinks, setSocialLinks] = useState({ facebook: '', instagram: '', tiktok: '', youtube: '' })
+  const [savingSocial, setSavingSocial] = useState(false)
+  const [socialSaved, setSocialSaved] = useState(false)
 
   // Quote Requests State
   const [quotes, setQuotes] = useState([])
@@ -69,9 +74,19 @@ export default function AdminDashboard() {
   })
   const [editingPromotion, setEditingPromotion] = useState(null)
 
-  // Load banner design on mount
+  // Gallery State
+  const [galleryImages, setGalleryImages] = useState([])
+  const [newGalleryItem, setNewGalleryItem] = useState({ title: '', category: 'Domestic', description: '', file: null })
+  const [uploadingGallery, setUploadingGallery] = useState(false)
+
+  // Before/After State
+  const [beforeAfterPairs, setBeforeAfterPairs] = useState([])
+  const [newBAItem, setNewBAItem] = useState({ title: '', category: 'Domestic', description: '', beforeFile: null, afterFile: null })
+  const [uploadingBA, setUploadingBA] = useState(false)
+
+  // Load banner design and social links on mount
   useEffect(() => {
-    const loadDesign = async () => {
+    const loadSettings = async () => {
       try {
         const { ref, get } = await import('firebase/database')
         const { db } = await import('../utils/firebase')
@@ -80,11 +95,16 @@ export default function AdminDashboard() {
         if (snapshot.exists()) {
           setBannerDesign(snapshot.val())
         }
+        const socialRef = ref(db, 'settings/socialLinks')
+        const socialSnap = await get(socialRef)
+        if (socialSnap.exists()) {
+          setSocialLinks({ facebook: '', instagram: '', tiktok: '', youtube: '', ...socialSnap.val() })
+        }
       } catch (error) {
-        console.log('Using default design')
+        console.log('Using default settings')
       }
     }
-    loadDesign()
+    loadSettings()
   }, [])
 
   // Load data based on active tab
@@ -112,6 +132,12 @@ export default function AdminDashboard() {
         } else if (activeTab === 'promotions') {
           const data = await getAllPromotions()
           setPromotions(data)
+        } else if (activeTab === 'gallery') {
+          const data = await getGalleryImages()
+          setGalleryImages(data)
+        } else if (activeTab === 'beforeAfter') {
+          const data = await getBeforeAfterPairs()
+          setBeforeAfterPairs(data)
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -303,6 +329,8 @@ export default function AdminDashboard() {
         customerEmail: quoteGeneratorData.customerEmail,
         customerPhone: quoteGeneratorData.customerPhone,
         customerAddress: quoteGeneratorData.customerAddress,
+        customerCity: quoteGeneratorData.city || quoteGeneratorData.customerCity || '',
+        customerPostcode: quoteGeneratorData.postcode || quoteGeneratorData.customerPostcode || '',
         workType: quoteGeneratorData.workType,
         workDescription: quoteGeneratorData.workDescription,
         items: quoteItems,
@@ -323,6 +351,89 @@ export default function AdminDashboard() {
     }
   }
 
+  // ==================== GALLERY ====================
+
+  const handleAddGalleryImage = async (e) => {
+    e.preventDefault()
+    if (!newGalleryItem.file) return
+    setUploadingGallery(true)
+    try {
+      await addGalleryImage(newGalleryItem)
+      setNewGalleryItem({ title: '', category: 'Domestic', description: '', file: null })
+      // reset file input
+      const fileInput = document.getElementById('gallery-file-input')
+      if (fileInput) fileInput.value = ''
+      const data = await getGalleryImages()
+      setGalleryImages(data)
+    } catch (error) {
+      console.error('Error uploading gallery image:', error)
+      alert('Error uploading image. Please try again.')
+    } finally {
+      setUploadingGallery(false)
+    }
+  }
+
+  const handleDeleteGalleryImage = async (id) => {
+    if (!confirm('Delete this image from the gallery?')) return
+    try {
+      await deleteGalleryImage(id)
+      const data = await getGalleryImages()
+      setGalleryImages(data)
+    } catch (error) {
+      console.error('Error deleting gallery image:', error)
+    }
+  }
+
+  // ==================== BEFORE / AFTER ====================
+
+  const handleAddBeforeAfterPair = async (e) => {
+    e.preventDefault()
+    if (!newBAItem.beforeFile || !newBAItem.afterFile) return
+    setUploadingBA(true)
+    try {
+      await addBeforeAfterPair(newBAItem)
+      setNewBAItem({ title: '', category: 'Domestic', description: '', beforeFile: null, afterFile: null })
+      const beforeInput = document.getElementById('ba-before-input')
+      const afterInput = document.getElementById('ba-after-input')
+      if (beforeInput) beforeInput.value = ''
+      if (afterInput) afterInput.value = ''
+      const data = await getBeforeAfterPairs()
+      setBeforeAfterPairs(data)
+    } catch (error) {
+      console.error('Error uploading before/after pair:', error)
+      alert('Error uploading images. Please try again.')
+    } finally {
+      setUploadingBA(false)
+    }
+  }
+
+  const handleDeleteBeforeAfterPair = async (id) => {
+    if (!confirm('Delete this before/after pair?')) return
+    try {
+      await deleteBeforeAfterPair(id)
+      const data = await getBeforeAfterPairs()
+      setBeforeAfterPairs(data)
+    } catch (error) {
+      console.error('Error deleting before/after pair:', error)
+    }
+  }
+
+  const handleSaveSocialLinks = async () => {
+    setSavingSocial(true)
+    try {
+      const { ref, set } = await import('firebase/database')
+      const { db } = await import('../utils/firebase')
+      await set(ref(db, 'settings/socialLinks'), socialLinks)
+      setSocialSaved(true)
+      setTimeout(() => window.location.reload(), 800)
+    } catch (error) {
+      console.error('Error saving social links:', error)
+      alert('Error saving social links. Please try again.')
+    } finally {
+      setSavingSocial(false)
+    }
+  }
+
   const handleBannerDesignChange = async (newDesign) => {
     try {
       const { ref, set } = await import('firebase/database')
@@ -340,7 +451,7 @@ export default function AdminDashboard() {
     <div>
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-        {['quotes', 'workTypes', 'materials', 'labour', 'testimonials', 'promotions', 'settings'].map(tab => (
+        {['quotes', 'workTypes', 'gallery', 'beforeAfter', 'testimonials', 'promotions', 'settings'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -349,8 +460,8 @@ export default function AdminDashboard() {
           >
             {tab === 'quotes' && 'Quote Requests'}
             {tab === 'workTypes' && 'Work Types'}
-            {tab === 'materials' && 'Materials'}
-            {tab === 'labour' && 'Labour Rates'}
+            {tab === 'gallery' && 'Gallery'}
+            {tab === 'beforeAfter' && 'Before & After'}
             {tab === 'testimonials' && 'Testimonials'}
             {tab === 'promotions' && 'Promotions'}
             {tab === 'settings' && 'Settings'}
@@ -467,97 +578,185 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* MATERIALS */}
-          {activeTab === 'materials' && (
+          {/* GALLERY */}
+          {activeTab === 'gallery' && (
             <div>
-              <h3 className="section-title">Materials ({materials.length})</h3>
-              <form onSubmit={handleAddMaterial} className="card" style={{ marginBottom: '2rem' }}>
-                <h4>Add New Material</h4>
+              <h3 className="section-title">Gallery ({galleryImages.length})</h3>
+
+              <form onSubmit={handleAddGalleryImage} className="card" style={{ marginBottom: '2rem' }}>
+                <h4>Upload New Image</h4>
                 <div className="grid grid-2">
                   <div className="form-group">
-                    <label>Material Name</label>
+                    <label>Title</label>
                     <input
                       type="text"
-                      value={newMaterial.name}
-                      onChange={e => setNewMaterial({ ...newMaterial, name: e.target.value })}
-                      placeholder="e.g., Cable (per meter)"
+                      value={newGalleryItem.title}
+                      onChange={e => setNewGalleryItem({ ...newGalleryItem, title: e.target.value })}
+                      placeholder="e.g., Kitchen Rewire"
+                      required
                     />
                   </div>
                   <div className="form-group">
-                    <label>Cost (£)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={newMaterial.cost}
-                      onChange={e => setNewMaterial({ ...newMaterial, cost: e.target.value })}
-                      placeholder="0.00"
-                    />
+                    <label>Category</label>
+                    <select
+                      value={newGalleryItem.category}
+                      onChange={e => setNewGalleryItem({ ...newGalleryItem, category: e.target.value })}
+                    >
+                      <option value="Domestic">Domestic</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Industrial">Industrial</option>
+                      <option value="Testing & Inspection">Testing &amp; Inspection</option>
+                    </select>
                   </div>
                 </div>
-                <button type="submit" className="btn">Add Material</button>
+                <div className="form-group">
+                  <label>Description</label>
+                  <input
+                    type="text"
+                    value={newGalleryItem.description}
+                    onChange={e => setNewGalleryItem({ ...newGalleryItem, description: e.target.value })}
+                    placeholder="Brief description of the project"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Image File *</label>
+                  <input
+                    id="gallery-file-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={e => setNewGalleryItem({ ...newGalleryItem, file: e.target.files[0] || null })}
+                    required
+                    style={{ color: 'var(--color-text)' }}
+                  />
+                </div>
+                <button type="submit" className="btn" disabled={uploadingGallery}>
+                  {uploadingGallery ? 'Uploading...' : 'Upload Image'}
+                </button>
               </form>
 
-              <div className="grid grid-3">
-                {materials.map(mat => (
-                  <div key={mat.id} className="card">
-                    <h4>{mat.name}</h4>
-                    <p style={{ fontSize: '1.5rem', color: 'var(--color-accent)' }}>£{mat.cost.toFixed(2)}</p>
-                    <button
-                      onClick={() => handleDeleteMaterial(mat.id)}
-                      className="btn btn-secondary btn-small"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
+              {galleryImages.length === 0 ? (
+                <div className="card">No gallery images yet. Upload one above.</div>
+              ) : (
+                <div className="grid grid-3">
+                  {galleryImages.map(img => (
+                    <div key={img.id} className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                      <img src={img.imageUrl} alt={img.title} style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
+                      <div style={{ padding: '0.75rem' }}>
+                        <h5 style={{ marginBottom: '0.2rem' }}>{img.title}</h5>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--color-accent)', marginBottom: '0.3rem' }}>{img.category}</p>
+                        <p style={{ fontSize: '0.8rem', opacity: 0.75, marginBottom: '0.75rem' }}>{img.description}</p>
+                        <button
+                          onClick={() => handleDeleteGalleryImage(img.id)}
+                          className="btn btn-secondary btn-small"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* LABOUR RATES */}
-          {activeTab === 'labour' && (
+          {/* BEFORE / AFTER */}
+          {activeTab === 'beforeAfter' && (
             <div>
-              <h3 className="section-title">Labour Rates ({labour.length})</h3>
-              <form onSubmit={handleAddLabour} className="card" style={{ marginBottom: '2rem' }}>
-                <h4>Add New Labour Rate</h4>
+              <h3 className="section-title">Before &amp; After ({beforeAfterPairs.length})</h3>
+
+              <form onSubmit={handleAddBeforeAfterPair} className="card" style={{ marginBottom: '2rem' }}>
+                <h4>Upload New Pair</h4>
                 <div className="grid grid-2">
                   <div className="form-group">
-                    <label>Description</label>
+                    <label>Title</label>
                     <input
                       type="text"
-                      value={newLabour.name}
-                      onChange={e => setNewLabour({ ...newLabour, name: e.target.value })}
-                      placeholder="e.g., Call Out Fee"
+                      value={newBAItem.title}
+                      onChange={e => setNewBAItem({ ...newBAItem, title: e.target.value })}
+                      placeholder="e.g., Full House Rewire"
+                      required
                     />
                   </div>
                   <div className="form-group">
-                    <label>Cost (£)</label>
+                    <label>Category</label>
+                    <select
+                      value={newBAItem.category}
+                      onChange={e => setNewBAItem({ ...newBAItem, category: e.target.value })}
+                    >
+                      <option value="Domestic">Domestic</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Industrial">Industrial</option>
+                      <option value="Testing & Inspection">Testing &amp; Inspection</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <input
+                    type="text"
+                    value={newBAItem.description}
+                    onChange={e => setNewBAItem({ ...newBAItem, description: e.target.value })}
+                    placeholder="Brief description of the transformation"
+                  />
+                </div>
+                <div className="grid grid-2">
+                  <div className="form-group">
+                    <label>Before Image *</label>
                     <input
-                      type="number"
-                      step="0.01"
-                      value={newLabour.cost}
-                      onChange={e => setNewLabour({ ...newLabour, cost: e.target.value })}
-                      placeholder="0.00"
+                      id="ba-before-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={e => setNewBAItem({ ...newBAItem, beforeFile: e.target.files[0] || null })}
+                      required
+                      style={{ color: 'var(--color-text)' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>After Image *</label>
+                    <input
+                      id="ba-after-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={e => setNewBAItem({ ...newBAItem, afterFile: e.target.files[0] || null })}
+                      required
+                      style={{ color: 'var(--color-text)' }}
                     />
                   </div>
                 </div>
-                <button type="submit" className="btn">Add Labour Rate</button>
+                <button type="submit" className="btn" disabled={uploadingBA}>
+                  {uploadingBA ? 'Uploading...' : 'Upload Pair'}
+                </button>
               </form>
 
-              <div className="grid grid-3">
-                {labour.map(rate => (
-                  <div key={rate.id} className="card">
-                    <h4>{rate.name}</h4>
-                    <p style={{ fontSize: '1.5rem', color: 'var(--color-accent)' }}>£{rate.cost.toFixed(2)}</p>
-                    <button
-                      onClick={() => handleDeleteLabour(rate.id)}
-                      className="btn btn-secondary btn-small"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
+              {beforeAfterPairs.length === 0 ? (
+                <div className="card">No before/after pairs yet. Upload one above.</div>
+              ) : (
+                <div className="grid grid-2">
+                  {beforeAfterPairs.map(pair => (
+                    <div key={pair.id} className="card">
+                      <h5 style={{ marginBottom: '0.2rem' }}>{pair.title}</h5>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--color-accent)', marginBottom: '0.75rem' }}>{pair.category}</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <div>
+                          <p style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.3rem', textAlign: 'center' }}>BEFORE</p>
+                          <img src={pair.beforeUrl} alt="before" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', display: 'block' }} />
+                        </div>
+                        <div>
+                          <p style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.3rem', textAlign: 'center' }}>AFTER</p>
+                          <img src={pair.afterUrl} alt="after" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', display: 'block' }} />
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', opacity: 0.75, marginBottom: '0.75rem' }}>{pair.description}</p>
+                      <button
+                        onClick={() => handleDeleteBeforeAfterPair(pair.id)}
+                        className="btn btn-secondary btn-small"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -577,7 +776,9 @@ export default function AdminDashboard() {
                   {pendingTestimonials.map(test => (
                     <div key={test.id} className="card">
                       <h5>{test.name}</h5>
-                      <p style={{ fontSize: '0.9rem' }}>★★★★★ ({test.rating}/5)</p>
+                      <p style={{ fontSize: '0.9rem' }}>
+                        {'★'.repeat(test.rating)}{'☆'.repeat(5 - test.rating)} ({test.rating}/5)
+                      </p>
                       <p>"{test.text}"</p>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
@@ -602,15 +803,30 @@ export default function AdminDashboard() {
               <h4 style={{ marginTop: '2rem', marginBottom: '1rem' }}>
                 Approved ({approvedTestimonials.length})
               </h4>
-              <div className="grid grid-2">
-                {approvedTestimonials.map(test => (
-                  <div key={test.id} className="card">
-                    <h5>{test.name}</h5>
-                    <p style={{ fontSize: '0.9rem' }}>★★★★★ ({test.rating}/5)</p>
-                    <p>"{test.text}"</p>
-                  </div>
-                ))}
-              </div>
+              {approvedTestimonials.length === 0 ? (
+                <div className="card">No approved testimonials yet.</div>
+              ) : (
+                <div className="grid grid-2">
+                  {approvedTestimonials.map(test => (
+                    <div key={test.id} className="card">
+                      <h5>{test.name}</h5>
+                      <p style={{ fontSize: '0.9rem' }}>
+                        {'★'.repeat(test.rating)}{'☆'.repeat(5 - test.rating)} ({test.rating}/5)
+                      </p>
+                      <p style={{ marginBottom: '0.5rem' }}>"{test.text}"</p>
+                      <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '1rem' }}>
+                        {test.createdAt ? new Date(test.createdAt).toLocaleDateString() : ''}
+                      </p>
+                      <button
+                        onClick={() => handleRejectTestimonial(test.id)}
+                        className="btn btn-secondary btn-small"
+                      >
+                        Remove from Site
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -872,6 +1088,40 @@ export default function AdminDashboard() {
                   💡 Tip: All designs fade behind navigation text for readability. The page will reload when you change the design.
                 </p>
               </div>
+
+              {/* Social Media Links */}
+              <div className="card">
+                <h4 style={{ marginBottom: '0.5rem' }}>Social Media Links</h4>
+                <p style={{ marginBottom: '1.25rem', opacity: 0.8, fontSize: '0.9rem' }}>
+                  Enter your profile URLs below. Leave blank to hide that platform from the footer.
+                </p>
+                <div className="grid grid-2">
+                  {[
+                    { key: 'facebook',  label: 'Facebook',  placeholder: 'https://www.facebook.com/yourpage' },
+                    { key: 'instagram', label: 'Instagram', placeholder: 'https://www.instagram.com/yourhandle' },
+                    { key: 'tiktok',    label: 'TikTok',    placeholder: 'https://www.tiktok.com/@yourhandle' },
+                    { key: 'youtube',   label: 'YouTube',   placeholder: 'https://www.youtube.com/@yourchannel' },
+                  ].map(({ key, label, placeholder }) => (
+                    <div className="form-group" key={key}>
+                      <label>{label}</label>
+                      <input
+                        type="url"
+                        value={socialLinks[key]}
+                        onChange={e => setSocialLinks({ ...socialLinks, [key]: e.target.value })}
+                        placeholder={placeholder}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                  <button onClick={handleSaveSocialLinks} className="btn" disabled={savingSocial}>
+                    {savingSocial ? 'Saving...' : 'Save Social Links'}
+                  </button>
+                  {socialSaved && (
+                    <span style={{ color: '#4ade80', fontSize: '0.9rem' }}>✓ Saved successfully</span>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </>
@@ -915,7 +1165,8 @@ export default function AdminDashboard() {
             <div className="card" style={{ marginBottom: '1.5rem' }}>
               <h3>Quote Items</h3>
               {quoteItems.map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '10px', marginBottom: '10px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+                <div key={idx} style={{ display: 'flex', gap: '10px', marginBottom: '10px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '4px', alignItems: 'center' }}>
+                  <span style={{ minWidth: '28px', height: '28px', backgroundColor: 'var(--color-accent)', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 }}>{idx + 1}</span>
                   <input type="text" value={item.description} onChange={(e) => {
                     const newItems = [...quoteItems]
                     newItems[idx].description = e.target.value
@@ -931,7 +1182,7 @@ export default function AdminDashboard() {
                     newItems[idx].unitCost = parseFloat(e.target.value) || 0
                     setQuoteItems(newItems)
                   }} style={{ width: '90px', padding: '5px', borderRadius: '4px', border: '1px solid var(--color-accent)' }} />
-                  <span style={{ width: '100px', textAlign: 'right', alignSelf: 'center', fontWeight: 'bold' }}>£{(item.quantity * item.unitCost).toFixed(2)}</span>
+                  <span style={{ width: '100px', textAlign: 'right', alignSelf: 'center', fontWeight: 'bold' }}>£{(item.quantity * item.unitCost).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   <button onClick={() => setQuoteItems(quoteItems.filter((_, i) => i !== idx))} style={{ padding: '5px 10px', backgroundColor: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '4px', cursor: 'pointer' }}>Remove</button>
                 </div>
               ))}
@@ -947,7 +1198,7 @@ export default function AdminDashboard() {
                 <h3>Totals</h3>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span>Subtotal:</span>
-                  <span>£{quoteItems.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0).toFixed(2)}</span>
+                  <span>£{quoteItems.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span>Discount %:</span>
@@ -955,7 +1206,7 @@ export default function AdminDashboard() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', backgroundColor: 'rgba(37,99,235,0.2)', borderRadius: '4px', fontWeight: 'bold', color: 'var(--color-accent)' }}>
                   <span>TOTAL:</span>
-                  <span>£{(quoteItems.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0) * (1 - quoteDiscount / 100)).toFixed(2)}</span>
+                  <span>£{(quoteItems.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0) * (1 - quoteDiscount / 100)).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>
