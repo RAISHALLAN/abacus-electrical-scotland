@@ -25,6 +25,9 @@ import {
   deletePromotion,
   getGalleryImages, addGalleryImage, deleteGalleryImage,
   getBeforeAfterPairs, addBeforeAfterPair, deleteBeforeAfterPair,
+  getContactInfo, saveContactInfo,
+  getHomeContent, saveHomeContent,
+  getServicesContent, saveServicesContent,
 } from '../utils/firebaseHelpers'
 import { generateQuotePDF } from '../utils/pdfGenerator'
 
@@ -35,6 +38,48 @@ export default function AdminDashboard() {
   const [socialLinks, setSocialLinks] = useState({ facebook: '', instagram: '', tiktok: '', youtube: '' })
   const [savingSocial, setSavingSocial] = useState(false)
   const [socialSaved, setSocialSaved] = useState(false)
+
+  // Contact Info State
+  const [contactInfo, setContactInfo] = useState({ phone: '', email: '', address: '' })
+  const [savingContact, setSavingContact] = useState(false)
+  const [contactSaved, setContactSaved] = useState(false)
+
+  // Home Content State
+  const [homeContent, setHomeContent] = useState({
+    heroTitle: 'Professional Electrical Services',
+    heroSubtitle: 'Qualified, certified, and fully insured electrician serving all of Scotland. Domestic and commercial electrical work.',
+    qualProfTitle: 'Professional Qualifications',
+    qualProfItems: 'City & Guilds Qualified Electrician\nNICEIC Registered\nELECSA Approved\nPEA Member',
+    qualSpecTitle: 'Specializations',
+    qualSpecItems: 'Domestic Installations\nCommercial Installations\nTesting & Inspection (EICR)\nFault Finding & Repairs',
+    servicesTitle: 'Our Services',
+    whyTitle: 'Why Choose Us',
+    why1Title: '✓ Fully Qualified', why1Desc: 'City & Guilds qualified with industry-recognized certifications.',
+    why2Title: '✓ Insured & Certified', why2Desc: 'NICEIC registered and ELECSA approved for your peace of mind.',
+    why3Title: '✓ Free Quotes', why3Desc: 'No obligation free quotations for all work undertaken.',
+    why4Title: '✓ Fast Response', why4Desc: 'Quick turnaround on estimates and prompt job completion.',
+    why5Title: '✓ Quality Work', why5Desc: 'Professional workmanship with attention to detail.',
+    why6Title: '✓ Fair Pricing', why6Desc: 'Competitive rates with transparent, itemized quotes.',
+    ctaTitle: 'Ready to Get Started?',
+    ctaSubtitle: 'Contact us today for a free, no-obligation quote on your electrical work.',
+  })
+  const [savingHome, setSavingHome] = useState(false)
+  const [homeSaved, setHomeSaved] = useState(false)
+
+  // Services Content State
+  const [servicesPage, setServicesPage] = useState({
+    pageTitle: 'Our Electrical Services',
+    pageSubtitle: 'Comprehensive electrical services for domestic and commercial customers across Scotland. All work carried out by fully qualified, certified electricians.',
+    ctaText: "Contact us directly and we'll be happy to help.",
+  })
+  const [servicesItems, setServicesItems] = useState([
+    { id: 'domestic', title: 'Domestic Services', description: 'Complete electrical solutions for residential properties', items: 'New house wiring and rewiring\nLighting installations\nSocket and switch installations\nBoiler and heating control wiring\nBathroom and kitchen electrical work\nGarden lighting and outdoor circuits\nFault finding and repair\nPeriodic testing and safety checks' },
+    { id: 'commercial', title: 'Commercial Services', description: 'Professional electrical services for business premises', items: 'Shop and retail installations\nOffice and warehouse wiring\nEmergency lighting systems\nFire alarm wiring\nData and communications cabling\nIndustrial electrical work\nFault diagnosis and repairs\nMaintenance contracts available' },
+    { id: 'testing', title: 'Testing & Inspection', description: 'Compliance and safety inspections', items: 'Electrical Installation Condition Reports (EICR)\nBuilding Regulation compliance testing\nPat testing for portable appliances\nPeriodic inspection and testing\nSafety certification\nFault analysis reports\nRisk assessment\nRemedial work recommendations' },
+    { id: 'maintenance', title: 'Maintenance & Support', description: 'Ongoing electrical support and preventative maintenance', items: 'Planned preventative maintenance\nEmergency call-out service\nRegular safety inspections\nComponent replacement\nSystem upgrades\n24/7 emergency response available\nMaintenance contracts\nTechnical support and advice' },
+  ])
+  const [savingServices, setSavingServices] = useState(false)
+  const [servicesSaved, setServicesSaved] = useState(false)
 
   // Quote Requests State
   const [quotes, setQuotes] = useState([])
@@ -84,7 +129,7 @@ export default function AdminDashboard() {
   const [newBAItem, setNewBAItem] = useState({ title: '', category: 'Domestic', description: '', beforeFile: null, afterFile: null })
   const [uploadingBA, setUploadingBA] = useState(false)
 
-  // Load banner design and social links on mount
+  // Load banner design, social links, contact info, and page content on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -102,6 +147,20 @@ export default function AdminDashboard() {
         }
       } catch (error) {
         console.log('Using default settings')
+      }
+      // Load contact info
+      const ci = await getContactInfo()
+      if (ci) setContactInfo(prev => ({ ...prev, ...ci }))
+      // Load home content
+      const hc = await getHomeContent()
+      if (hc) setHomeContent(prev => ({ ...prev, ...hc }))
+      // Load services content
+      const sc = await getServicesContent()
+      if (sc) {
+        setServicesPage(prev => ({ ...prev, ...sc }))
+        if (sc.services && Array.isArray(sc.services)) {
+          setServicesItems(prev => sc.services.map((s, i) => ({ ...prev[i], ...s })))
+        }
       }
     }
     loadSettings()
@@ -444,6 +503,45 @@ export default function AdminDashboard() {
       setTimeout(() => window.location.reload(), 500)
     } catch (error) {
       console.error('Error updating banner design:', error)
+    }
+  }
+
+  const handleSaveContactInfo = async () => {
+    setSavingContact(true)
+    try {
+      await saveContactInfo(contactInfo)
+      setContactSaved(true)
+      setTimeout(() => setContactSaved(false), 3000)
+    } catch (error) {
+      alert('Error saving contact info. Please try again.')
+    } finally {
+      setSavingContact(false)
+    }
+  }
+
+  const handleSaveHomeContent = async () => {
+    setSavingHome(true)
+    try {
+      await saveHomeContent(homeContent)
+      setHomeSaved(true)
+      setTimeout(() => setHomeSaved(false), 3000)
+    } catch (error) {
+      alert('Error saving home page content. Please try again.')
+    } finally {
+      setSavingHome(false)
+    }
+  }
+
+  const handleSaveServicesContent = async () => {
+    setSavingServices(true)
+    try {
+      await saveServicesContent({ ...servicesPage, services: servicesItems })
+      setServicesSaved(true)
+      setTimeout(() => setServicesSaved(false), 3000)
+    } catch (error) {
+      alert('Error saving services content. Please try again.')
+    } finally {
+      setSavingServices(false)
     }
   }
 
@@ -1122,6 +1220,189 @@ export default function AdminDashboard() {
                   )}
                 </div>
               </div>
+
+              {/* Contact Details */}
+              <div className="card">
+                <h4 style={{ marginBottom: '0.5rem' }}>Contact Details</h4>
+                <p style={{ marginBottom: '1.25rem', opacity: 0.8, fontSize: '0.9rem' }}>
+                  Displayed in the footer and on the Contact page.
+                </p>
+                <div className="grid grid-3">
+                  <div className="form-group">
+                    <label>Phone</label>
+                    <input
+                      type="text"
+                      value={contactInfo.phone}
+                      onChange={e => setContactInfo({ ...contactInfo, phone: e.target.value })}
+                      placeholder="+44 7931768138"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={contactInfo.email}
+                      onChange={e => setContactInfo({ ...contactInfo, email: e.target.value })}
+                      placeholder="info@abacuselectricalscotland.co.uk"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Address</label>
+                    <input
+                      type="text"
+                      value={contactInfo.address}
+                      onChange={e => setContactInfo({ ...contactInfo, address: e.target.value })}
+                      placeholder="Scotland"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                  <button onClick={handleSaveContactInfo} className="btn" disabled={savingContact}>
+                    {savingContact ? 'Saving...' : 'Save Contact Details'}
+                  </button>
+                  {contactSaved && <span style={{ color: '#4ade80', fontSize: '0.9rem' }}>✓ Saved</span>}
+                </div>
+              </div>
+
+              {/* Home Page Content */}
+              <div className="card">
+                <h4 style={{ marginBottom: '0.5rem' }}>Home Page Content</h4>
+                <p style={{ marginBottom: '1.25rem', opacity: 0.8, fontSize: '0.9rem' }}>
+                  Edit the text shown on the landing page.
+                </p>
+
+                <h5 style={{ marginBottom: '0.75rem', opacity: 0.7, fontWeight: 600 }}>Hero Section</h5>
+                <div className="form-group">
+                  <label>Hero Title</label>
+                  <input type="text" value={homeContent.heroTitle} onChange={e => setHomeContent({ ...homeContent, heroTitle: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Hero Subtitle</label>
+                  <textarea value={homeContent.heroSubtitle} onChange={e => setHomeContent({ ...homeContent, heroSubtitle: e.target.value })} style={{ height: '70px' }} />
+                </div>
+
+                <h5 style={{ margin: '1.25rem 0 0.75rem', opacity: 0.7, fontWeight: 600 }}>Qualifications & Credentials</h5>
+                <div className="grid grid-2">
+                  <div>
+                    <div className="form-group">
+                      <label>Left Card Title</label>
+                      <input type="text" value={homeContent.qualProfTitle} onChange={e => setHomeContent({ ...homeContent, qualProfTitle: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label>Left Card Items (one per line)</label>
+                      <textarea value={homeContent.qualProfItems} onChange={e => setHomeContent({ ...homeContent, qualProfItems: e.target.value })} style={{ height: '100px' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="form-group">
+                      <label>Right Card Title</label>
+                      <input type="text" value={homeContent.qualSpecTitle} onChange={e => setHomeContent({ ...homeContent, qualSpecTitle: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label>Right Card Items (one per line)</label>
+                      <textarea value={homeContent.qualSpecItems} onChange={e => setHomeContent({ ...homeContent, qualSpecItems: e.target.value })} style={{ height: '100px' }} />
+                    </div>
+                  </div>
+                </div>
+
+                <h5 style={{ margin: '1.25rem 0 0.75rem', opacity: 0.7, fontWeight: 600 }}>Why Choose Us</h5>
+                <div className="grid grid-2">
+                  {[1,2,3,4,5,6].map(n => (
+                    <div key={n} style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label>Card {n} Title</label>
+                        <input type="text" value={homeContent[`why${n}Title`]} onChange={e => setHomeContent({ ...homeContent, [`why${n}Title`]: e.target.value })} />
+                      </div>
+                      <div className="form-group" style={{ flex: 2 }}>
+                        <label>Card {n} Description</label>
+                        <input type="text" value={homeContent[`why${n}Desc`]} onChange={e => setHomeContent({ ...homeContent, [`why${n}Desc`]: e.target.value })} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <h5 style={{ margin: '1.25rem 0 0.75rem', opacity: 0.7, fontWeight: 600 }}>Bottom CTA</h5>
+                <div className="grid grid-2">
+                  <div className="form-group">
+                    <label>CTA Title</label>
+                    <input type="text" value={homeContent.ctaTitle} onChange={e => setHomeContent({ ...homeContent, ctaTitle: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>CTA Subtitle</label>
+                    <input type="text" value={homeContent.ctaSubtitle} onChange={e => setHomeContent({ ...homeContent, ctaSubtitle: e.target.value })} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                  <button onClick={handleSaveHomeContent} className="btn" disabled={savingHome}>
+                    {savingHome ? 'Saving...' : 'Save Home Page'}
+                  </button>
+                  {homeSaved && <span style={{ color: '#4ade80', fontSize: '0.9rem' }}>✓ Saved</span>}
+                </div>
+              </div>
+
+              {/* Services Page Content */}
+              <div className="card">
+                <h4 style={{ marginBottom: '0.5rem' }}>Services Page Content</h4>
+                <p style={{ marginBottom: '1.25rem', opacity: 0.8, fontSize: '0.9rem' }}>
+                  Edit the services page text and service item lists (one item per line).
+                </p>
+
+                <div className="grid grid-2">
+                  <div className="form-group">
+                    <label>Page Title</label>
+                    <input type="text" value={servicesPage.pageTitle} onChange={e => setServicesPage({ ...servicesPage, pageTitle: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Questions Section Text</label>
+                    <input type="text" value={servicesPage.ctaText} onChange={e => setServicesPage({ ...servicesPage, ctaText: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Page Subtitle</label>
+                  <textarea value={servicesPage.pageSubtitle} onChange={e => setServicesPage({ ...servicesPage, pageSubtitle: e.target.value })} style={{ height: '70px' }} />
+                </div>
+
+                {servicesItems.map((service, idx) => (
+                  <div key={service.id} style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem', marginTop: '1rem' }}>
+                    <h5 style={{ marginBottom: '0.75rem', opacity: 0.7, fontWeight: 600 }}>{service.title}</h5>
+                    <div className="grid grid-2">
+                      <div className="form-group">
+                        <label>Title</label>
+                        <input type="text" value={service.title} onChange={e => {
+                          const updated = [...servicesItems]
+                          updated[idx] = { ...updated[idx], title: e.target.value }
+                          setServicesItems(updated)
+                        }} />
+                      </div>
+                      <div className="form-group">
+                        <label>Description</label>
+                        <input type="text" value={service.description} onChange={e => {
+                          const updated = [...servicesItems]
+                          updated[idx] = { ...updated[idx], description: e.target.value }
+                          setServicesItems(updated)
+                        }} />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Items (one per line)</label>
+                      <textarea value={service.items} onChange={e => {
+                        const updated = [...servicesItems]
+                        updated[idx] = { ...updated[idx], items: e.target.value }
+                        setServicesItems(updated)
+                      }} style={{ height: '140px' }} />
+                    </div>
+                  </div>
+                ))}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+                  <button onClick={handleSaveServicesContent} className="btn" disabled={savingServices}>
+                    {savingServices ? 'Saving...' : 'Save Services Page'}
+                  </button>
+                  {servicesSaved && <span style={{ color: '#4ade80', fontSize: '0.9rem' }}>✓ Saved</span>}
+                </div>
+              </div>
+
             </div>
           )}
         </>

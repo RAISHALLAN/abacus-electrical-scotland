@@ -1,9 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import QuoteForm from '../components/QuoteForm'
 import { generateContactConfirmationEmail, generateAdminContactNotificationEmail, sendEmail } from '../utils/emailTemplates'
+import { getContactInfo } from '../utils/firebaseHelpers'
 
 export default function Contact() {
   const [activeTab, setActiveTab] = useState('quote')
+  const [companyInfo, setCompanyInfo] = useState({
+    phone: import.meta.env.VITE_COMPANY_PHONE || '+44 7931768138',
+    email: import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectricalscotland.co.uk',
+    address: import.meta.env.VITE_COMPANY_ADDRESS || 'Scotland',
+  })
+
+  useEffect(() => {
+    getContactInfo().then(data => {
+      if (data) setCompanyInfo(prev => ({ ...prev, ...data }))
+    })
+  }, [])
 
   const [contactInfo, setContactInfo] = useState({
     name: '',
@@ -40,7 +52,7 @@ export default function Contact() {
       }
 
       try {
-        const adminEmail = import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'
+        const adminEmail = companyInfo.email
         const adminEmailHtml = generateAdminContactNotificationEmail(
           contactInfo.name,
           contactInfo.email,
@@ -224,8 +236,8 @@ export default function Contact() {
           <div className="card">
             <h4>Phone</h4>
             <p>
-              <a href={`tel:${import.meta.env.VITE_COMPANY_PHONE || '+440000000000'}`}>
-                {import.meta.env.VITE_COMPANY_PHONE || '(+44) XXX'}
+              <a href={`tel:${companyInfo.phone}`}>
+                {companyInfo.phone}
               </a>
             </p>
           </div>
@@ -233,15 +245,15 @@ export default function Contact() {
           <div className="card">
             <h4>Email</h4>
             <p>
-              <a href={`mailto:${import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'}`}>
-                {import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'}
+              <a href={`mailto:${companyInfo.email}`}>
+                {companyInfo.email}
               </a>
             </p>
           </div>
 
           <div className="card">
             <h4>Address</h4>
-            <p>{import.meta.env.VITE_COMPANY_ADDRESS || 'Scotland'}</p>
+            <p>{companyInfo.address}</p>
           </div>
 
           <div className="card">

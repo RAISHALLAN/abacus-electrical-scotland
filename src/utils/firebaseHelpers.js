@@ -548,3 +548,72 @@ export const deleteBeforeAfterPair = async (id) => {
     throw error
   }
 }
+
+// ==================== CONTACT INFO ====================
+
+export const getContactInfo = async () => {
+  try {
+    const contactRef = ref(db, 'settings/contactInfo')
+    const snapshot = await get(contactRef)
+    if (snapshot.exists()) return snapshot.val()
+    return null
+  } catch (error) {
+    console.error('Error fetching contact info:', error)
+    return null
+  }
+}
+
+export const saveContactInfo = async (info) => {
+  try {
+    await set(ref(db, 'settings/contactInfo'), info)
+  } catch (error) {
+    console.error('Error saving contact info:', error)
+    throw error
+  }
+}
+
+// ==================== HOME PAGE CONTENT ====================
+
+export const getHomeContent = async () => {
+  try {
+    const homeRef = ref(db, 'settings/homeContent')
+    const snapshot = await get(homeRef)
+    if (snapshot.exists()) return snapshot.val()
+    return null
+  } catch (error) {
+    console.error('Error fetching home content:', error)
+    return null
+  }
+}
+
+export const saveHomeContent = async (content) => {
+  try {
+    await set(ref(db, 'settings/homeContent'), content)
+  } catch (error) {
+    console.error('Error saving home content:', error)
+    throw error
+  }
+}
+
+// ==================== SERVICES PAGE CONTENT ====================
+
+export const getServicesContent = async () => {
+  try {
+    const servRef = ref(db, 'settings/servicesContent')
+    const snapshot = await get(servRef)
+    if (snapshot.exists()) return snapshot.val()
+    return null
+  } catch (error) {
+    console.error('Error fetching services content:', error)
+    return null
+  }
+}
+
+export const saveServicesContent = async (content) => {
+  try {
+    await set(ref(db, 'settings/servicesContent'), content)
+  } catch (error) {
+    console.error('Error saving services content:', error)
+    throw error
+  }
+}

@@ -1,12 +1,17 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { db } from '../utils/firebase'
-import { ref, get, set } from 'firebase/database'
+import { ref, get } from 'firebase/database'
 
 export default function Layout({ children }) {
   const location = useLocation()
   const [bannerDesign, setBannerDesign] = useState('design-wires')
   const [socialLinks, setSocialLinks] = useState({ facebook: '', instagram: '', tiktok: '', youtube: '' })
+  const [contactInfo, setContactInfo] = useState({
+    phone: import.meta.env.VITE_COMPANY_PHONE || '+44 7931768138',
+    email: import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectricalscotland.co.uk',
+    address: import.meta.env.VITE_COMPANY_ADDRESS || 'Scotland',
+  })
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -20,6 +25,11 @@ export default function Layout({ children }) {
         const socialSnap = await get(socialRef)
         if (socialSnap.exists()) {
           setSocialLinks({ facebook: '', instagram: '', tiktok: '', youtube: '', ...socialSnap.val() })
+        }
+        const contactRef = ref(db, 'settings/contactInfo')
+        const contactSnap = await get(contactRef)
+        if (contactSnap.exists()) {
+          setContactInfo(prev => ({ ...prev, ...contactSnap.val() }))
         }
       } catch (error) {
         console.log('Using default settings')
@@ -122,9 +132,9 @@ export default function Layout({ children }) {
           </div>
           <div className="footer-section">
             <h4>Contact</h4>
-            <p>Phone: {import.meta.env.VITE_COMPANY_PHONE || '(+44) XXX'}</p>
-            <p>Email: {import.meta.env.VITE_COMPANY_EMAIL || 'info@abacuselectrical.co.uk'}</p>
-            <p>Address: {import.meta.env.VITE_COMPANY_ADDRESS || 'Scotland'}</p>
+            <p>Phone: {contactInfo.phone}</p>
+            <p>Email: {contactInfo.email}</p>
+            <p>Address: {contactInfo.address}</p>
           </div>
         </div>
         <div className="footer-bottom">
